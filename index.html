@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>עצרו את ההצבעה!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #fde68a;
+    --blue-dark: #0b1730;
+    --blue-mid: #162354;
+    --red: #ef4444;
+    --green: #22c55e;
+    --text-muted: #7a9cc4;
+  }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0b1730 0%, #162354 55%, #0b1730 100%);
+    font-family: 'Heebo', 'Frank Ruhl Libre', Georgia, serif;
+    direction: rtl;
+    color: #fff;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(201,168,76,0.06) 1px, transparent 0);
+    background-size: 28px 28px;
+  }
+
+  #app { position: relative; z-index: 1; width: 100vw; height: 100dvh; }
+
+  /* ── Screens ── */
+  .screen { display: none; position: absolute; inset: 0; }
+  .screen.active { display: flex; }
+
+  /* ── Center ── */
+  .center {
+    flex-direction: column; align-items: center;
+    justify-content: center; width: 100%; gap: 16px; padding: 24px;
+    text-align: center;
+  }
+
+  .logo-badge {
+    display: inline-block; border: 1px solid rgba(201,168,76,0.4);
+    padding: 3px 24px; margin-bottom: 8px; border-radius: 2px;
+    color: var(--gold); font-size: 10px; letter-spacing: 5px; font-family: monospace;
+  }
+  h1.main-title {
+    font-size: clamp(26px, 6vw, 46px); font-weight: 900;
+    line-height: 1.1; text-shadow: 0 0 40px rgba(201,168,76,0.4);
+    margin: 4px 0;
+  }
+  .subtitle { color: var(--text-muted); font-size: 14px; }
+  .gold-line {
+    width: 60px; height: 2px; margin: 10px auto 0;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  /* ── Spinner ── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(201,168,76,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 11px 26px; border-radius: 10px; border: none;
+    color: #fff; font-weight: 700; font-size: 15px;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); opacity: 0.9; }
+  .btn-blue { background: linear-gradient(135deg, #1d3f8f, #2563eb); }
+  .btn-gold { background: linear-gradient(135deg, #92400e, #d97706); }
+  .btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #a0b4d4; }
+  .btn-refresh {
+    background: transparent; border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text-muted); border-radius: 8px; padding: 8px 20px;
+    cursor: pointer; font-size: 13px; font-family: inherit;
+  }
+
+  /* ── Game list ── */
+  .game-list { display: flex; flex-direction: column; gap: 9px; width: 100%; max-width: 600px; margin-bottom: 16px; }
+  .game-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 13px; padding: 14px 18px; cursor: pointer;
+    transition: all 0.18s; display: flex; align-items: center; gap: 14px;
+  }
+  .game-card:hover {
+    background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.6);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3); transform: translateY(-1px);
+  }
+  .card-icon {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+  }
+  .icon-for     { background: linear-gradient(135deg, #14532d, #22c55e); }
+  .icon-against { background: linear-gradient(135deg, #7f1d1d, #ef4444); }
+  .card-body { flex: 1; min-width: 0; }
+  .card-title { color: #fff; font-weight: 700; font-size: 14px; line-height: 1.3; margin-bottom: 5px; }
+  .card-tags  { display: flex; gap: 5px; flex-wrap: wrap; }
+  .pill {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; border: 1px solid transparent;
+    background: rgba(255,255,255,0.08); color: var(--text-muted);
+  }
+  .pill-for     { background: rgba(34,197,94,0.15);  color: #86efac; border-color: rgba(34,197,94,0.35); }
+  .pill-against { background: rgba(239,68,68,0.15);  color: #fca5a5; border-color: rgba(239,68,68,0.35); }
+  .card-arrow { color: var(--gold); font-size: 18px; flex-shrink: 0; }
+
+  /* ── Difficulty ── */
+  .diff-wrap { display: flex; justify-content: center; gap: 8px; margin: 12px 0 0; }
+  .diff-btn {
+    padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(201,168,76,0.3);
+    background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .diff-btn:hover { border-color: rgba(201,168,76,0.7); color: #fff; }
+  .diff-btn.easy.active   { background: rgba(34,197,94,0.15);  border-color: #22c55e; color: #86efac; }
+  .diff-btn.medium.active { background: rgba(201,168,76,0.15); border-color: var(--gold); color: var(--gold-light); }
+  .diff-btn.hard.active   { background: rgba(239,68,68,0.15);  border-color: var(--red); color: #fca5a5; }
+
+  /* ══ GAME SCREEN ══ */
+  #screen-game {
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* ── HUD ── */
+  .hud {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px 6px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid rgba(201,168,76,0.15);
+    gap: 8px;
+    z-index: 10;
+  }
+  .hud-title {
+    flex: 1; min-width: 0;
+    font-size: clamp(11px,2.5vw,13px); font-weight: 700; color: #fff;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .hud-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .hud-stat { text-align: center; }
+  .hud-stat-label { font-size: 9px; color: var(--text-muted); font-family: monospace; }
+  .hud-stat-val   { font-size: 17px; font-weight: 900; font-family: monospace; }
+  .hud-divider { width: 1px; height: 28px; background: rgba(255,255,255,0.1); }
+  .lives-row { display: flex; gap: 3px; font-size: 18px; }
+
+  /* ── Finish line ── */
+  .finish-line {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 48px;
+    background: linear-gradient(180deg, transparent, rgba(239,68,68,0.15) 60%, rgba(239,68,68,0.35));
+    border-top: 2px solid rgba(239,68,68,0.6);
+    pointer-events: none; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .finish-line-label {
+    color: rgba(239,68,68,0.7); font-size: 10px; letter-spacing: 4px;
+    font-family: monospace; font-weight: 700;
+  }
+
+  /* ── Progress bar ── */
+  .prog-wrap {
+    flex-shrink: 0; height: 4px;
+    background: rgba(255,255,255,0.07);
+  }
+  .prog-bar {
+    height: 100%; background: linear-gradient(90deg, #166534, #22c55e);
+    transition: width 0.3s ease; width: 0%;
+  }
+
+  /* ── Arena ── */
+  #arena {
+    flex: 1; position: relative; overflow: hidden;
+    cursor: crosshair;
+  }
+
+  /* ── Falling name ── */
+  .name-tag {
+    position: absolute;
+    top: -60px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1a2f6b, #0f1c3f);
+    border: 1.5px solid rgba(201,168,76,0.5);
+    color: #fff;
+    font-weight: 700;
+    font-size: clamp(11px, 2.8vw, 14px);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.1s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    z-index: 4;
+    transform: translateX(-50%);
+  }
+  .name-tag:hover {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, #2a4090, #1a3080);
+  }
+
+  /* ── Explosion ── */
+  @keyframes explode {
+    0%   { transform: translateX(-50%) scale(1); opacity: 1; }
+    40%  { transform: translateX(-50%) scale(1.6); opacity: 0.8; }
+    100% { transform: translateX(-50%) scale(0.3); opacity: 0; }
+  }
+  @keyframes particle {
+    0%   { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+  }
+  .exploding {
+    animation: explode 0.32s ease-out forwards;
+    pointer-events: none;
+    background: linear-gradient(135deg, #854d0e, #d97706) !important;
+    border-color: var(--gold-light) !important;
+    color: var(--gold-light);
+  }
+  .particle {
+    position: absolute;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particle 0.5s ease-out forwards;
+    z-index: 20;
+  }
+
+  /* ── Miss flash ── */
+  @keyframes missFlash {
+    0%,100% { background: transparent; }
+    50%     { background: rgba(239,68,68,0.18); }
+  }
+  .miss-flash { animation: missFlash 0.35s ease; }
+
+  /* ── Passed (reached bottom) ── */
+  @keyframes passedAnim {
+    0%   { transform: translateX(-50%) scale(1); opacity: 1; }
+    50%  { transform: translateX(-50%) scale(1.15) translateY(-6px); opacity: 0.9; }
+    100% { transform: translateX(-50%) scale(0.8) translateY(30px); opacity: 0; }
+  }
+  .passed-tag {
+    animation: passedAnim 0.4s ease-in forwards;
+    pointer-events: none;
+    background: linear-gradient(135deg, #7f1d1d, #ef4444) !important;
+    border-color: #fca5a5 !important;
+  }
+
+  /* ── Life lost ── */
+  @keyframes heartPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.6); }
+    100% { transform: scale(1); }
+  }
+  .life-pop { animation: heartPop 0.35s ease; }
+
+  /* ── Screen flash ── */
+  #screen-flash {
+    position: fixed; inset: 0; pointer-events: none; z-index: 100;
+    opacity: 0;
+  }
+  @keyframes flashRed {
+    0%   { opacity: 0.45; }
+    100% { opacity: 0; }
+  }
+  .flash-red { animation: flashRed 0.4s ease-out forwards; background: #ef4444; }
+
+  /* ── Win/Loss overlay ── */
+  @keyframes pop { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
+  #result-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(5,12,35,0.88);
+    backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  #result-overlay.active { display: flex; }
+  .result-box {
+    background: linear-gradient(160deg, #0f2050, #1a3570);
+    border: 2px solid rgba(201,168,76,0.45);
+    border-radius: 20px; padding: 32px 28px;
+    max-width: 380px; width: 100%; text-align: center;
+    animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .result-icon { font-size: 54px; margin-bottom: 8px; }
+  .result-title { font-size: 28px; font-weight: 900; margin-bottom: 6px; }
+  .result-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+  .result-stats { display: flex; justify-content: center; gap: 28px; margin-bottom: 22px; }
+  .rs-label { color: var(--text-muted); font-size: 11px; margin-bottom: 3px; }
+  .rs-val { font-size: 24px; font-weight: 900; font-family: monospace; color: var(--gold); }
+  .result-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* ── Instructions modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 150;
+    background: rgba(5,12,35,0.85);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-box {
+    background: linear-gradient(160deg, #0f2050, #1a3570);
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 20px; padding: 28px 24px;
+    max-width: 400px; width: 100%; text-align: center;
+    animation: pop 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .modal-title { color: var(--gold); font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+  .modal-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; text-align: right; }
+  .modal-step {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 10px 14px;
+  }
+  .modal-step-icon { font-size: 20px; flex-shrink: 0; }
+  .modal-step-text { color: #cbd5e1; font-size: 13px; line-height: 1.5; }
+  .modal-step-text strong { color: #fff; }
+
+  /* ── Back button ── */
+  .btn-back {
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.13);
+    color: var(--text-muted); border-radius: 8px; padding: 5px 12px;
+    cursor: pointer; font-size: 12px; font-family: inherit; flex-shrink: 0;
+  }
+
+  /* ── Error ── */
+  .error-box {
+    color: #fca5a5; font-size: 13px; font-family: monospace;
+    max-width: 380px; line-height: 1.7;
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 10px; padding: 12px 16px;
+  }
+
+  /* ── Home scroll ── */
+  #screen-home .center {
+    overflow-y: auto;
+    height: 100%;
+    justify-content: flex-start;
+    padding-top: 32px;
+  }
+
+  /* ── Score flash ── */
+  @keyframes scoreFloat {
+    0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-50px); }
+  }
+  .score-float {
+    position: absolute;
+    font-size: 20px; font-weight: 900; color: var(--gold-light);
+    pointer-events: none; z-index: 30;
+    animation: scoreFloat 0.8s ease-out forwards;
+    transform: translateX(-50%);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ LOADING ══ -->
+  <div id="screen-loading" class="screen active">
+    <div class="center">
+      <div style="font-size:52px">🗳️</div>
+      <div style="color:var(--gold);font-size:22px;font-weight:700">עצרו את ההצבעה!</div>
+      <div class="spinner"></div>
+      <div id="load-msg" style="color:var(--text-muted);font-size:13px;font-family:monospace;max-width:300px"></div>
+    </div>
+  </div>
+
+  <!-- ══ ERROR ══ -->
+  <div id="screen-error" class="screen">
+    <div class="center">
+      <div style="font-size:48px">⚠️</div>
+      <div style="color:#f87171;font-size:18px;font-weight:700">שגיאה בטעינה</div>
+      <div id="error-msg" class="error-box"></div>
+      <button class="btn btn-blue" onclick="loadGames(true)">🔄 נסה שוב</button>
+    </div>
+  </div>
+
+  <!-- ══ HOME ══ -->
+  <div id="screen-home" class="screen">
+    <div class="center">
+      <div style="text-align:center;margin-bottom:24px">
+        <div class="logo-badge">כנסת ישראל</div>
+        <h1 class="main-title">🚨 עצרו את ההצבעה!</h1>
+        <p class="subtitle">מנעו מחברי הכנסת להגיע לקלפי</p>
+        <div class="gold-line"></div>
+      </div>
+      <div class="diff-wrap" style="margin-bottom:4px">
+        <button class="diff-btn easy"   onclick="setDiff('easy')"   id="diff-easy">קל</button>
+        <button class="diff-btn medium active" onclick="setDiff('medium')" id="diff-medium">בינוני</button>
+        <button class="diff-btn hard"   onclick="setDiff('hard')"   id="diff-hard">קשה</button>
+      </div>
+      <div id="game-list" class="game-list" style="margin-top:14px"></div>
+      <div style="text-align:center;margin-bottom:24px">
+        <button class="btn-refresh" onclick="renderHome()">🔀 הצבעות אחרות</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ GAME ══ -->
+  <div id="screen-game" class="screen">
+    <div class="hud">
+      <button class="btn-back" onclick="quitGame()">◄ יציאה</button>
+      <div class="hud-title" id="hud-title"></div>
+      <div class="hud-right">
+        <div class="hud-stat">
+          <div class="hud-stat-label">ניקוד</div>
+          <div class="hud-stat-val" id="hud-score" style="color:var(--gold)">0</div>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="hud-stat">
+          <div class="hud-stat-label">נותרו</div>
+          <div class="hud-stat-val" id="hud-left" style="color:var(--text-muted)">0</div>
+        </div>
+        <div class="hud-divider"></div>
+        <div class="lives-row" id="lives-row">❤️❤️❤️</div>
+      </div>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+    <div id="arena">
+      <div class="finish-line">
+        <span class="finish-line-label">קו ההצבעה</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Screen flash overlay -->
+<div id="screen-flash"></div>
+
+<!-- Result overlay -->
+<div id="result-overlay">
+  <div class="result-box" id="result-box"></div>
+</div>
+
+<!-- Instructions modal -->
+<div id="modal-instructions" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">🚨 איך עוצרים?</div>
+    <div class="modal-steps">
+      <div class="modal-step">
+        <div class="modal-step-icon">⬇️</div>
+        <div class="modal-step-text">חברי כנסת <strong>נופלים מלמעלה</strong> לכיוון קו ההצבעה</div>
+      </div>
+      <div class="modal-step">
+        <div class="modal-step-icon">👆</div>
+        <div class="modal-step-text"><strong>לחצו / הקישו</strong> על שם כדי לעצור אותם לפני שמגיעים לקו</div>
+      </div>
+      <div class="modal-step">
+        <div class="modal-step-icon">❤️</div>
+        <div class="modal-step-text">אם מישהו מגיע לקו — <strong>מאבדים חיים</strong>. 3 חיים למשחק</div>
+      </div>
+      <div class="modal-step">
+        <div class="modal-step-icon">⚡</div>
+        <div class="modal-step-text">בדרגה <strong>קשה</strong> יש יותר שמות ומהירות גבוהה יותר</div>
+      </div>
+    </div>
+    <button class="btn btn-blue" onclick="dismissModal()" style="width:100%">
+      אני מוכן! 🚀
+    </button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════════
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzT15l5xd73KP7KFGivqMXJkuZtM8jsTCI9TOqY5DC3K-EeuLPwfW2A8KF9WFREYPf8/exec";
+const CACHE_KEY = "knesset-blaster-cache-v1";
+const API_BASES = [
+  "https://www.knesset.gov.il",
+  "https://knesset.gov.il",
+  "https://main.knesset.gov.il",
+];
+const DETAIL_PATH = "/WebSiteApi/knessetapi/Votes/GetVoteDetails/";
+
+const DIFF_CONFIG = {
+  easy:   { maxOnScreen: 3, spawnInterval: 2800, speedMin: 28, speedMax: 40, label: 'קל' },
+  medium: { maxOnScreen: 5, spawnInterval: 1900, speedMin: 20, speedMax: 30, label: 'בינוני' },
+  hard:   { maxOnScreen: 8, spawnInterval: 1200, speedMin: 13, speedMax: 21, label: 'קשה' },
+};
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const shuffle = arr => { const a=[...arr]; for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function readCache()  { try { return JSON.parse(localStorage.getItem(CACHE_KEY)||'{}'); } catch { return {}; } }
+function writeCache(d){ try { localStorage.setItem(CACHE_KEY, JSON.stringify(d)); } catch {} }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+function setLoadMsg(msg) { document.getElementById('load-msg').textContent = msg || '…'; }
+
+// ── Fetch data ─────────────────────────────────────────────────────────────
+async function fetchSheetRows() {
+  let resp, data;
+  try {
+    resp = await fetch(APPS_SCRIPT_URL);
+    data = await resp.json();
+  } catch(e) { throw new Error('לא ניתן לטעון. בדוק חיבור אינטרנט.'); }
+  if (!Array.isArray(data)) throw new Error('שגיאה בטעינת המשחק.');
+  return data.filter(r => r.voteId && /^\d+$/.test(r.voteId))
+    .map(r => ({ ...r, shortName: (r.shortName || r.short_name || '').trim() }));
+}
+
+async function fetchVoteDetails(voteId) {
+  for (const base of API_BASES) {
+    try {
+      const r = await fetch(base + DETAIL_PATH + voteId, { mode: 'cors' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      if (data?.VoteDetails) return data;
+    } catch (_) {}
+    await sleep(200);
+  }
+  throw new Error(`שגיאה בטעינת הצבעה ${voteId}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════════════
+let allGames = [];
+let currentDiff = 'medium';
+
+// ── Difficulty ─────────────────────────────────────────────────────────────
+function setDiff(d) {
+  currentDiff = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('diff-' + d).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LOAD
+// ══════════════════════════════════════════════════════════════════════════
+async function loadGames(bustCache = false) {
+  showScreen('loading');
+  setLoadMsg('טוען הצבעות…');
+  try {
+    if (bustCache) writeCache({});
+    const rows  = await fetchSheetRows();
+    if (!rows.length) throw new Error('לא נמצאו משחקים זמינים');
+
+    const cache = readCache();
+    const games = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const { voteId, type } = rows[i];
+      const ck = `${voteId}__${type}`;
+      setLoadMsg(`טוען הצבעה ${i+1} מתוך ${rows.length}…`);
+      if (cache[ck]) { games.push(cache[ck]); continue; }
+      try {
+        const data   = await fetchVoteDetails(voteId);
+        const header = data.VoteHeader?.[0] || {};
+        const members = (data.VoteDetails || []).filter(d => d.Title === type).map(d => d.MkName);
+        if (members.length < 2) continue;
+        const game = {
+          voteId, type,
+          title:     header.ItemTitle   || 'ללא כותרת',
+          shortName: rows[i].shortName  || '',
+          date:      header.VoteDateStr || '',
+          decision:  header.Decision    || '',
+          members,
+        };
+        cache[ck] = game;
+        games.push(game);
+      } catch(e) { console.warn('Skip', voteId, e.message); }
+    }
+
+    writeCache(cache);
+    allGames = games;
+    if (!games.length) throw new Error('לא נמצאו הצבעות תקינות');
+    renderHome();
+    showScreen('home');
+  } catch(e) {
+    document.getElementById('error-msg').textContent = e.message;
+    showScreen('error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// HOME
+// ══════════════════════════════════════════════════════════════════════════
+let _firstHome = true;
+function renderHome() {
+  const list = document.getElementById('game-list');
+  list.innerHTML = '';
+  const picked = shuffle([...allGames.map((game, idx) => ({ game, idx }))]).slice(0, 4);
+  picked.forEach(({ game, idx }) => {
+    const isFor = game.type === 'בעד';
+    const card  = document.createElement('div');
+    card.className = 'game-card';
+    card.innerHTML = `
+      <div class="card-icon ${isFor ? 'icon-for' : 'icon-against'}">${isFor ? '✓' : '✗'}</div>
+      <div class="card-body">
+        <div class="card-title">${esc(game.shortName || game.title)}</div>
+        <div class="card-tags">
+          <span class="pill ${isFor ? 'pill-for' : 'pill-against'}">${isFor ? '✔ מצביעי בעד' : '✘ מצביעי נגד'}</span>
+          ${game.date     ? `<span class="pill">${esc(game.date)}</span>` : ''}
+          ${game.decision ? `<span class="pill">${esc(game.decision)}</span>` : ''}
+          <span class="pill" style="color:#fde68a;border-color:rgba(201,168,76,0.4)">${game.members.length} חברי כנסת</span>
+        </div>
+      </div>
+      <span class="card-arrow">▶</span>`;
+    card.onclick = () => startGame(idx);
+    list.appendChild(card);
+  });
+
+  if (_firstHome) {
+    _firstHome = false;
+    setTimeout(() => {
+      document.getElementById('modal-instructions').style.display = 'flex';
+    }, 300);
+  }
+}
+
+function dismissModal() {
+  document.getElementById('modal-instructions').style.display = 'none';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// GAME ENGINE
+// ══════════════════════════════════════════════════════════════════════════
+let gs = null; // game state
+let spawnTimer  = null;
+let animFrameId = null;
+
+function startGame(idx) {
+  stopGame();
+  const game = allGames[idx];
+  const cfg  = DIFF_CONFIG[currentDiff];
+
+  gs = {
+    game,
+    cfg,
+    names:       shuffle([...game.members]),
+    nameQueue:   [],
+    activeTags:  [],   // { el, name, x, y, speed }
+    score:       0,
+    lives:       3,
+    eliminated:  0,
+    total:       game.members.length,
+    done:        false,
+    spawnIdx:    0,
+    elapsed:     0,        // seconds since game start
+    wave:        0,        // current acceleration wave (0-based)
+    speedMult:   1.0,      // applied to all falling speeds
+    spawnInterval: cfg.spawnInterval,  // current interval (shrinks over time)
+  };
+  gs.nameQueue = [...gs.names];
+
+  // Set up UI
+  document.getElementById('hud-title').textContent = game.shortName || game.title;
+  updateHud();
+
+  // Clear arena (keep finish line)
+  const arena = document.getElementById('arena');
+  arena.querySelectorAll('.name-tag, .score-float, .particle').forEach(e => e.remove());
+
+  showScreen('game');
+  document.getElementById('result-overlay').classList.remove('active');
+
+  // Start spawning
+  spawnNext();
+  spawnTimer = setInterval(spawnNext, gs.spawnInterval);
+
+  // Animation loop
+  lastFrame = performance.now();
+  animFrameId = requestAnimationFrame(gameLoop);
+}
+
+let lastFrame = 0;
+
+// ── Acceleration config ────────────────────────────────────────────────────
+// Every WAVE_INTERVAL seconds: speed +15%, spawn interval -15%, max on screen +1
+// Caps at WAVE_MAX waves so it doesn't become impossible
+const WAVE_INTERVAL = 12;  // seconds between waves
+const WAVE_MAX      = 6;   // max 6 waves (~72 sec to full speed)
+
+function tickAcceleration(dt) {
+  gs.elapsed += dt;
+  const newWave = Math.min(Math.floor(gs.elapsed / WAVE_INTERVAL), WAVE_MAX);
+  if (newWave > gs.wave) {
+    gs.wave = newWave;
+    gs.speedMult = 1 + gs.wave * 0.18;          // +18% speed per wave
+
+    // Spawn interval shrinks by 14% per wave, floored at 600ms
+    gs.spawnInterval = Math.max(
+      Math.round(gs.cfg.spawnInterval * Math.pow(0.86, gs.wave)),
+      600
+    );
+
+    // Restart spawn timer with new interval
+    clearInterval(spawnTimer);
+    spawnTimer = setInterval(spawnNext, gs.spawnInterval);
+
+    // Visual cue — briefly flash HUD title
+    const titleEl = document.getElementById('hud-title');
+    titleEl.style.color = '#fde68a';
+    showWaveBanner(gs.wave);
+    setTimeout(() => { titleEl.style.color = ''; }, 600);
+  }
+}
+
+function showWaveBanner(wave) {
+  const arena = document.getElementById('arena');
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-size:clamp(18px,5vw,28px); font-weight:900; color:#fde68a;
+    text-shadow:0 2px 16px rgba(0,0,0,0.9); pointer-events:none; z-index:50;
+    animation:scoreFloat 1.1s ease-out forwards; white-space:nowrap;
+  `;
+  const labels = ['','⚡ מהירות עולה!','🔥 מהירות גבוהה!','💥 מהירות קיצונית!','🚨 מהר מאוד!','⚠️ כמעט בלתי אפשרי!','☠️ מהירות מקסימלית!'];
+  el.textContent = labels[Math.min(wave, labels.length - 1)];
+  arena.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+function gameLoop(ts) {
+  if (!gs || gs.done) return;
+  const dt = Math.min((ts - lastFrame) / 1000, 0.1); // seconds, capped
+  lastFrame = ts;
+
+  tickAcceleration(dt);
+
+  const arena  = document.getElementById('arena');
+  const height = arena.offsetHeight;
+  const finishY = height - 48; // finish line top
+
+  for (let i = gs.activeTags.length - 1; i >= 0; i--) {
+    const tag = gs.activeTags[i];
+    tag.y += tag.speed * gs.speedMult * dt;
+    tag.el.style.top = tag.y + 'px';
+
+    // Reached finish line?
+    if (tag.y + tag.el.offsetHeight >= finishY) {
+      tagPassed(tag, i);
+    }
+  }
+
+  animFrameId = requestAnimationFrame(gameLoop);
+}
+
+function spawnNext() {
+  if (!gs || gs.done) return;
+  if (gs.nameQueue.length === 0) {
+    clearInterval(spawnTimer);
+    spawnTimer = null;
+    return;
+  }
+  // maxOnScreen grows by 1 every 2 waves
+  const dynamicMax = gs.cfg.maxOnScreen + Math.floor((gs.wave || 0) / 2);
+  if (gs.activeTags.length >= dynamicMax) return;
+
+  const name   = gs.nameQueue.shift();
+  const arena  = document.getElementById('arena');
+  const aWidth = arena.offsetWidth;
+
+  const el = document.createElement('div');
+  el.className = 'name-tag';
+  el.textContent = name;
+
+  // Random x, avoiding edges
+  const margin = 80;
+  const x = margin + Math.random() * (aWidth - margin * 2);
+  el.style.left = x + 'px';
+  el.style.top  = '-60px';
+
+  const speed = gs.cfg.speedMin + Math.random() * (gs.cfg.speedMax - gs.cfg.speedMin);
+
+  arena.appendChild(el);
+
+  const tagObj = { el, name, x, y: -60, speed };
+  gs.activeTags.push(tagObj);
+
+  el.addEventListener('click', () => blastTag(tagObj));
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); blastTag(tagObj); }, { passive: false });
+}
+
+function blastTag(tag) {
+  if (!gs || gs.done || tag.blasted) return;
+  tag.blasted = true;
+
+  const idx = gs.activeTags.indexOf(tag);
+  if (idx !== -1) gs.activeTags.splice(idx, 1);
+
+  // Explosion animation
+  tag.el.classList.add('exploding');
+  spawnParticles(tag.x, tag.y, tag.el.offsetHeight / 2);
+
+  // Score float
+  gs.score += 10;
+  gs.eliminated++;
+  showScoreFloat(tag.x, tag.y, '+10');
+  updateHud();
+  checkWin();
+
+  setTimeout(() => tag.el.remove(), 350);
+
+  // Resume spawning if paused
+  if (!spawnTimer && gs.nameQueue.length > 0 && !gs.done) {
+    spawnTimer = setInterval(spawnNext, gs.spawnInterval);
+  }
+}
+
+function tagPassed(tag, idx) {
+  if (tag.blasted) return;
+  tag.blasted = true;
+  gs.activeTags.splice(idx, 1);
+
+  // Animate tag off screen
+  tag.el.classList.add('passed-tag');
+  setTimeout(() => tag.el.remove(), 420);
+
+  // Flash screen red
+  const flash = document.getElementById('screen-flash');
+  flash.className = 'flash-red';
+  setTimeout(() => { flash.className = ''; }, 400);
+
+  // Lose a life
+  gs.lives--;
+  updateHud();
+
+  if (gs.lives <= 0) {
+    endGame(false);
+    return;
+  }
+
+  // Resume spawning
+  if (!spawnTimer && gs.nameQueue.length > 0 && !gs.done) {
+    spawnTimer = setInterval(spawnNext, gs.spawnInterval);
+  }
+}
+
+function checkWin() {
+  if (!gs) return;
+  const remaining = gs.nameQueue.length + gs.activeTags.filter(t => !t.blasted).length;
+  if (gs.eliminated >= gs.total || (gs.nameQueue.length === 0 && gs.activeTags.filter(t=>!t.blasted).length === 0)) {
+    // small delay to let last explosion finish
+    setTimeout(() => endGame(true), 500);
+  }
+}
+
+function endGame(won) {
+  if (!gs || gs.done) return;
+  gs.done = true;
+  stopGame();
+
+  const box = document.getElementById('result-box');
+  const pct = Math.round((gs.eliminated / gs.total) * 100);
+  box.innerHTML = won
+    ? `
+      <div class="result-icon">🏆</div>
+      <div class="result-title" style="color:var(--gold)">עצרתם את ההצבעה!</div>
+      <div class="result-sub">כל חברי הכנסת עוצרו בהצלחה</div>
+      <div class="result-stats">
+        <div><div class="rs-label">ניקוד</div><div class="rs-val">${gs.score}</div></div>
+        <div><div class="rs-label">עוצרו</div><div class="rs-val">${gs.eliminated}/${gs.total}</div></div>
+        <div><div class="rs-label">חיים</div><div class="rs-val">${'❤️'.repeat(gs.lives)}</div></div>
+      </div>
+      <div class="result-btns">
+        <button class="btn btn-gold"  onclick="restartGame()">🔄 שחק שוב</button>
+        <button class="btn btn-ghost" onclick="quitGame()">🏠 בחר הצבעה</button>
+      </div>`
+    : `
+      <div class="result-icon">💔</div>
+      <div class="result-title" style="color:var(--red)">ההצבעה עברה!</div>
+      <div class="result-sub">נגמרו לכם החיים — ${gs.eliminated} מתוך ${gs.total} עוצרו</div>
+      <div class="result-stats">
+        <div><div class="rs-label">ניקוד</div><div class="rs-val">${gs.score}</div></div>
+        <div><div class="rs-label">עוצרו</div><div class="rs-val">${gs.eliminated}/${gs.total}</div></div>
+        <div><div class="rs-label">הגיעו</div><div class="rs-val">${gs.total - gs.eliminated}</div></div>
+      </div>
+      <div class="result-btns">
+        <button class="btn btn-gold"  onclick="restartGame()">🔄 נסה שוב</button>
+        <button class="btn btn-ghost" onclick="quitGame()">🏠 בחר הצבעה</button>
+      </div>`;
+
+  document.getElementById('result-overlay').classList.add('active');
+}
+
+function restartGame() {
+  document.getElementById('result-overlay').classList.remove('active');
+  const idx = allGames.indexOf(gs.game);
+  startGame(idx >= 0 ? idx : 0);
+}
+
+function quitGame() {
+  stopGame();
+  document.getElementById('result-overlay').classList.remove('active');
+  showScreen('home');
+}
+
+function stopGame() {
+  clearInterval(spawnTimer); spawnTimer = null;
+  cancelAnimationFrame(animFrameId); animFrameId = null;
+}
+
+// ── HUD update ─────────────────────────────────────────────────────────────
+function updateHud() {
+  if (!gs) return;
+  document.getElementById('hud-score').textContent = gs.score;
+  const remaining = gs.total - gs.eliminated;
+  document.getElementById('hud-left').textContent  = remaining;
+
+  // Lives
+  const livesEl = document.getElementById('lives-row');
+  const hearts = ['❤️','❤️','❤️'];
+  for (let i = 3 - 1; i >= gs.lives; i--) hearts[i] = '🖤';
+  livesEl.textContent = hearts.join('');
+
+  // Progress
+  const pct = gs.total ? (gs.eliminated / gs.total) * 100 : 0;
+  document.getElementById('prog-bar').style.width = pct + '%';
+}
+
+// ── Particles ──────────────────────────────────────────────────────────────
+function spawnParticles(x, y, offsetY) {
+  const arena = document.getElementById('arena');
+  const colors = ['#c9a84c','#fde68a','#d97706','#fff','#f59e0b'];
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = x + 'px';
+    p.style.top  = (y + offsetY) + 'px';
+    const angle = (i / 8) * Math.PI * 2;
+    const dist  = 30 + Math.random() * 40;
+    p.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    arena.appendChild(p);
+    setTimeout(() => p.remove(), 520);
+  }
+}
+
+// ── Score float ────────────────────────────────────────────────────────────
+function showScoreFloat(x, y, text) {
+  const arena = document.getElementById('arena');
+  const el = document.createElement('div');
+  el.className = 'score-float';
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  arena.appendChild(el);
+  setTimeout(() => el.remove(), 820);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════════════════════
+loadGames();
+</script>
+</body>
+</html>
