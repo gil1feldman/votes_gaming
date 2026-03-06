@@ -285,7 +285,7 @@
 </div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzT15l5xd73KP7KFGivqMXJkuZtM8jsTCI9TOqY5DC3K-EeuLPwfW2A8KF9WFREYPf8/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUwq_cgIJLmaf_aAwHRXDQRZr4IIelf0t7r_N7-AiC2UCmoTd79Or8bllVb42AsIM/exec";
 const CACHE_KEY   = "knesset-pop-cache-v1";
 const API_BASES   = ["https://www.knesset.gov.il","https://knesset.gov.il","https://main.knesset.gov.il"];
 const DETAIL_PATH = "/WebSiteApi/knessetapi/Votes/GetVoteDetails/";
@@ -453,7 +453,8 @@ function rafLoop(){
 
 function spawnBubble(){
   if(!gs||gs.done) return;
-  const alive=gs.active.filter(b=>!b.dead).length;
+  // count ALL bubbles still in DOM (dead ones are still animating out)
+  const alive=gs.active.length;
   const maxNow=gs.cfg.maxAlive+gs.wave;
   if(alive>=maxNow) return;
 
@@ -485,7 +486,6 @@ function spawnBubble(){
 function hitBubble(b){
   if(!gs||b.dead) return;
   b.dead=true; clearTimeout(b.timeout);
-  remove(b);
 
   const rect=b.el.getBoundingClientRect();
   const ar=document.getElementById('arena').getBoundingClientRect();
@@ -496,16 +496,16 @@ function hitBubble(b){
   particles(cx,cy);
   floatText(cx,cy,'+1','#86efac');
   gs.hits++; updateHud();
-  setTimeout(()=>b.el.remove(),320);
+  setTimeout(()=>{ b.el.remove(); remove(b); }, 320);
 }
 
 function missBubble(b){
   if(b.dead) return;
-  b.dead=true; remove(b);
+  b.dead=true;
   b.el.classList.add('missed');
   floatText(parseFloat(b.el.style.left),parseFloat(b.el.style.top)-10,'✗','#fca5a5');
   gs.misses++; updateHud();
-  setTimeout(()=>b.el.remove(),280);
+  setTimeout(()=>{ b.el.remove(); remove(b); }, 280);
 }
 
 function remove(b){ const i=gs.active.indexOf(b); if(i!==-1) gs.active.splice(i,1); }
@@ -517,6 +517,25 @@ function endGame(){
 
   const total=gs.hits+gs.misses;
   const pct=total?Math.round(gs.hits/total*100):0;
+
+  // שמירה ל-Google Sheets
+  try {
+    fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        game:            "blaster",
+        difficulty:      currentDiff,
+        hits:            gs.hits,
+        misses:          gs.misses,
+        accuracy:        pct,
+        vote_id:         gs.game.voteId,
+        vote_short_name: gs.game.shortName || gs.game.title,
+        vote_type:       gs.game.type,
+      }),
+    });
+  } catch(_) {}
+
   const icon=pct>=80?'🏆':pct>=50?'⚡':'💔';
   const grade=pct>=80?'מדהים!':pct>=60?'כל הכבוד!':pct>=40?'לא רע…':'ההצבעה עברה 😬';
 
