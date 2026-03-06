@@ -90,6 +90,9 @@
   .timer-bar  { height: 100%; background: linear-gradient(90deg,#166534,#22c55e); transition: width .25s linear; width: 100%; }
   .timer-bar.urgent { background: linear-gradient(90deg,#7f1d1d,#ef4444); }
 
+  /* progress bubbles counter */
+  .hud-progress { flex-shrink: 0; font-size: 11px; color: var(--muted); font-family: monospace; white-space: nowrap; }
+
   #arena { flex: 1; position: relative; overflow: hidden; }
 
   /* ── Bubble ── */
@@ -162,18 +165,60 @@
   .wave-banner { position: absolute; top: 42%; left: 50%; font-size: clamp(16px,5vw,26px); font-weight: 900; color: #fde68a; text-shadow: 0 2px 20px rgba(0,0,0,0.95); pointer-events: none; z-index: 50; white-space: nowrap; animation: waveBanner 1.2s ease forwards; }
 
   @keyframes pop { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
-  #result-overlay { position:fixed; inset:0; z-index:200; background:rgba(5,12,35,0.88); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:20px; }
+  #result-overlay { position:fixed; inset:0; z-index:200; background:rgba(5,12,35,0.92); backdrop-filter:blur(6px); display:none; align-items:flex-start; justify-content:center; padding:16px; overflow-y: auto; }
   #result-overlay.active { display:flex; }
-  .result-box { background:linear-gradient(160deg,#0f2050,#1a3570); border:2px solid rgba(201,168,76,0.45); border-radius:20px; padding:32px 28px; max-width:400px; width:100%; text-align:center; animation:pop .4s cubic-bezier(.34,1.56,.64,1); }
+  .result-box { background:linear-gradient(160deg,#0f2050,#1a3570); border:2px solid rgba(201,168,76,0.45); border-radius:20px; padding:28px 24px; max-width:560px; width:100%; text-align:center; animation:pop .4s cubic-bezier(.34,1.56,.64,1); margin: auto; }
   .result-icon  { font-size:54px; margin-bottom:8px; }
   .result-title { font-size:26px; font-weight:900; margin-bottom:6px; }
   .result-sub   { color:var(--muted); font-size:14px; margin-bottom:16px; line-height:1.5; }
-  .result-stats { display:flex; justify-content:center; gap:24px; margin-bottom:22px; flex-wrap:wrap; }
+  .result-stats { display:flex; justify-content:center; gap:24px; margin-bottom:18px; flex-wrap:wrap; }
   .rs-label { color:var(--muted); font-size:11px; margin-bottom:3px; }
   .rs-val   { font-size:26px; font-weight:900; font-family:monospace; color:var(--gold); }
-  .result-btns  { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .result-btns  { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom: 24px; }
   .score-bar-wrap { width:100%; background:rgba(255,255,255,0.07); border-radius:10px; overflow:hidden; height:12px; margin:10px 0 4px; }
   .score-bar-fill { height:100%; border-radius:10px; background:linear-gradient(90deg,#166534,#22c55e); transition:width .7s ease; }
+
+  /* ── All members grid ── */
+  .members-section { margin-top: 8px; text-align: right; }
+  .members-section-title {
+    font-size: 13px; font-weight: 700; color: var(--gold);
+    margin-bottom: 10px; text-align: center;
+    padding-bottom: 8px; border-bottom: 1px solid rgba(201,168,76,0.2);
+  }
+  .members-grid {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: flex-start;
+    max-height: 240px; overflow-y: auto;
+    padding: 4px 2px;
+  }
+  .members-grid::-webkit-scrollbar { width: 4px; }
+  .members-grid::-webkit-scrollbar-track { background: transparent; }
+  .members-grid::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 4px; }
+
+  .member-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .member-chip.hit {
+    background: rgba(34,197,94,0.15);
+    border-color: rgba(34,197,94,0.4);
+    color: #86efac;
+  }
+  .member-chip.miss {
+    background: rgba(239,68,68,0.1);
+    border-color: rgba(239,68,68,0.3);
+    color: #fca5a5;
+  }
+  .member-chip .chip-icon { font-size: 11px; }
+
+  .members-legend {
+    display: flex; gap: 14px; justify-content: center;
+    font-size: 11px; color: var(--muted); margin-bottom: 8px;
+  }
+  .members-legend span { display: flex; align-items: center; gap: 4px; }
 
   .modal-overlay { position:fixed; inset:0; z-index:150; background:rgba(5,12,35,0.85); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px; }
   .modal-box { background:linear-gradient(160deg,#0f2050,#1a3570); border:1px solid rgba(201,168,76,0.4); border-radius:20px; padding:28px 24px; max-width:400px; width:100%; text-align:center; animation:pop .3s cubic-bezier(.34,1.56,.64,1); }
@@ -247,6 +292,11 @@
           <div class="hud-stat-label">⏱ זמן</div>
           <div class="hud-stat-val" id="hud-time" style="color:var(--gold)">30</div>
         </div>
+        <div class="hud-divider"></div>
+        <div class="hud-stat">
+          <div class="hud-stat-label">📋 נותרו</div>
+          <div class="hud-stat-val" id="hud-remain" style="color:var(--muted)">0</div>
+        </div>
       </div>
     </div>
     <div class="timer-wrap"><div class="timer-bar" id="timer-bar"></div></div>
@@ -265,7 +315,7 @@
     <div class="modal-steps">
       <div class="modal-step">
         <div class="modal-step-icon">💥</div>
-        <div class="modal-step-text">שמות של חברי כנסת <strong>קופצים על המסך</strong> ונעלמים אחרי שנייה קצרה</div>
+        <div class="modal-step-text">שמות של <strong>כל חברי הכנסת שהצביעו</strong> קופצים על המסך ונעלמים אחרי שנייה קצרה</div>
       </div>
       <div class="modal-step">
         <div class="modal-step-icon">👆</div>
@@ -277,7 +327,7 @@
       </div>
       <div class="modal-step">
         <div class="modal-step-icon">⚡</div>
-        <div class="modal-step-text">המשחק נמשך <strong>30 שניות</strong> — בסוף רואים כמה עוצרתם</div>
+        <div class="modal-step-text">המשחק נמשך <strong>30 שניות</strong> — כל חברי הכנסת יופיעו לפחות פעם אחת. בסוף רואים <strong>מי עצרתם ומי פוספס</strong></div>
       </div>
     </div>
     <button class="btn btn-blue" onclick="dismissModal()" style="width:100%">אני מוכן! 🚀</button>
@@ -289,22 +339,21 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgazehwQa2MAVv
 const CACHE_KEY   = "knesset-pop-cache-v1";
 const API_BASES   = ["https://www.knesset.gov.il","https://knesset.gov.il","https://main.knesset.gov.il"];
 const DETAIL_PATH = "/WebSiteApi/knessetapi/Votes/GetVoteDetails/";
-const GAME_DURATION = 30;
 
-// bubbleMs = how long a bubble stays visible (shrinks each wave)
-// maxAlive = max bubbles on screen at once (grows each wave)
-// spawnMs  = ms between spawn attempts (shrinks each wave)
+// bubbleMs = how long a bubble stays visible
+// maxAlive = max bubbles on screen at once
+// spawnMs  = ms between spawn attempts
 const DIFF_CONFIG = {
   easy:   { bubbleMs: 2600, maxAlive: 4,  spawnMs: 1000 },
   medium: { bubbleMs: 1700, maxAlive: 6,  spawnMs:  650 },
   hard:   { bubbleMs:  950, maxAlive: 9,  spawnMs:  380 },
 };
-const WAVE_COUNT    = 5;
-const WAVE_INTERVAL = GAME_DURATION / WAVE_COUNT; // 6s
-const BUBBLE_DECAY  = 0.82; // each wave bubbleMs *= 0.82
-const SPAWN_DECAY   = 0.86; // each wave spawnMs  *= 0.86
-const MIN_BUBBLE_MS = 400;
-const MIN_SPAWN_MS  = 220;
+const WAVE_COUNT      = 5;
+const BUBBLE_DECAY    = 0.82;
+const SPAWN_DECAY     = 0.86;
+const MIN_BUBBLE_MS   = 400;
+const MIN_SPAWN_MS    = 220;
+const GAME_DURATION   = 30;
 
 const sleep   = ms => new Promise(r=>setTimeout(r,ms));
 const shuffle = a  => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];} return b; };
@@ -391,11 +440,24 @@ function startGame(idx){
   stopAll();
   const game=allGames[idx];
   const cfg=DIFF_CONFIG[currentDiff];
+
+  // Fixed 30s. Pool = shuffled members for first pass, then free loop.
+  // firstPassDone tracks when every member appeared at least once.
   gs={
     game, cfg,
-    namePool: shuffle([...game.members]),
-    poolIdx:  0,
-    active:   [],   // live bubbles
+    gameDuration: GAME_DURATION,
+    waveInterval: GAME_DURATION / WAVE_COUNT,
+    // First-pass pool (shuffled) — once exhausted we loop freely
+    firstPassPool: shuffle([...game.members]),
+    firstPassIdx:  0,
+    firstPassDone: false,
+    // For the free loop after first pass
+    freePool: [],
+    freeIdx:  0,
+    active:   [],
+    // Per-member result for the end screen: name -> 'hit' | 'miss'
+    // Set only on FIRST appearance of each name
+    memberResults: {},
     hits:0, misses:0,
     elapsed:0, wave:0,
     curBubbleMs: cfg.bubbleMs,
@@ -418,8 +480,8 @@ function gameTick(){
   if(!gs||gs.done) return;
   gs.elapsed+=0.25;
 
-  // wave progression
-  const newWave=Math.min(Math.floor(gs.elapsed/WAVE_INTERVAL), WAVE_COUNT);
+  // Wave progression
+  const newWave=Math.min(Math.floor(gs.elapsed/gs.waveInterval), WAVE_COUNT);
   if(newWave>gs.wave){
     gs.wave=newWave;
     gs.curBubbleMs=Math.max(Math.round(gs.cfg.bubbleMs*Math.pow(BUBBLE_DECAY,gs.wave)), MIN_BUBBLE_MS);
@@ -429,13 +491,15 @@ function gameTick(){
     showWaveBanner(gs.wave);
   }
 
-  const rem=Math.max(0, GAME_DURATION-gs.elapsed);
+  const rem=Math.max(0, gs.gameDuration-gs.elapsed);
   document.getElementById('hud-time').textContent=Math.ceil(rem);
-  const pct=rem/GAME_DURATION;
+  const pct=rem/gs.gameDuration;
   const bar=document.getElementById('timer-bar');
   bar.style.width=(pct*100)+'%';
   bar.className='timer-bar'+(pct<0.3?' urgent':'');
-  if(gs.elapsed>=GAME_DURATION) endGame();
+
+  // End only at time limit
+  if(gs.elapsed>=gs.gameDuration) endGame();
 }
 
 function rafLoop(){
@@ -453,12 +517,33 @@ function rafLoop(){
 
 function spawnBubble(){
   if(!gs||gs.done) return;
-  // count ALL bubbles still in DOM (dead ones are still animating out)
+
   const alive=gs.active.length;
   const maxNow=gs.cfg.maxAlive+gs.wave;
   if(alive>=maxNow) return;
 
-  const name=gs.namePool[gs.poolIdx%gs.namePool.length]; gs.poolIdx++;
+  // Pick next name:
+  // — First pass: go through every member once in shuffled order
+  // — After first pass: loop freely (new shuffle each full cycle)
+  let name;
+  if(!gs.firstPassDone){
+    if(gs.firstPassIdx < gs.firstPassPool.length){
+      name = gs.firstPassPool[gs.firstPassIdx++];
+    } else {
+      // First pass complete — build free pool and continue
+      gs.firstPassDone = true;
+      gs.freePool = shuffle([...gs.game.members]);
+      gs.freeIdx  = 0;
+      name = gs.freePool[gs.freeIdx++];
+    }
+  } else {
+    if(gs.freeIdx >= gs.freePool.length){
+      gs.freePool = shuffle([...gs.game.members]);
+      gs.freeIdx  = 0;
+    }
+    name = gs.freePool[gs.freeIdx++];
+  }
+
   const arena=document.getElementById('arena');
   const W=arena.offsetWidth, H=arena.offsetHeight;
   const mx=75, my=55;
@@ -481,6 +566,8 @@ function spawnBubble(){
   b.timeout=setTimeout(()=>missBubble(b), gs.curBubbleMs);
   el.addEventListener('click',()=>hitBubble(b));
   el.addEventListener('touchstart',e=>{e.preventDefault();hitBubble(b);},{passive:false});
+
+  updateHud();
 }
 
 function hitBubble(b){
@@ -495,7 +582,10 @@ function hitBubble(b){
   b.el.classList.add('exploding');
   particles(cx,cy);
   floatText(cx,cy,'+1','#86efac');
-  gs.hits++; updateHud();
+  gs.hits++;
+  // Record only on first appearance
+  if(!gs.memberResults[b.name]) gs.memberResults[b.name]='hit';
+  updateHud();
   setTimeout(()=>{ b.el.remove(); remove(b); }, 320);
 }
 
@@ -504,7 +594,10 @@ function missBubble(b){
   b.dead=true;
   b.el.classList.add('missed');
   floatText(parseFloat(b.el.style.left),parseFloat(b.el.style.top)-10,'✗','#fca5a5');
-  gs.misses++; updateHud();
+  gs.misses++;
+  // Record only on first appearance
+  if(!gs.memberResults[b.name]) gs.memberResults[b.name]='miss';
+  updateHud();
   setTimeout(()=>{ b.el.remove(); remove(b); }, 280);
 }
 
@@ -538,13 +631,27 @@ function endGame(){
 
   const icon=pct>=80?'🏆':pct>=50?'⚡':'💔';
   const grade=pct>=80?'מדהים!':pct>=60?'כל הכבוד!':pct>=40?'לא רע…':'ההצבעה עברה 😬';
+  const isFor = gs.game.type === 'בעד';
+
+  // All members: seen ones get their result, unseen ones get 'miss'
+  const allNames = gs.game.members;
+  const hitNames  = allNames.filter(n=>gs.memberResults[n]==='hit');
+  const missNames = allNames.filter(n=>gs.memberResults[n]==='miss');
+  const unseenNames = allNames.filter(n=>!gs.memberResults[n]); // never spawned in 30s
+
+  const makeChips = (names, cls, icon) =>
+    names.map(n=>`<span class="member-chip ${cls}"><span class="chip-icon">${icon}</span>${esc(n)}</span>`).join('');
+
+  const voteLabel = isFor
+    ? `<span style="color:#86efac">בעד</span>`
+    : `<span style="color:#fca5a5">נגד</span>`;
 
   document.getElementById('result-box').innerHTML=`
     <div class="result-icon">${icon}</div>
     <div class="result-title" style="color:var(--gold)">${grade}</div>
-    <div class="result-sub">עצרת <strong style="color:#86efac">${gs.hits}</strong> מתוך <strong>${total}</strong> חברי כנסת</div>
+    <div class="result-sub">עצרת <strong style="color:#86efac">${gs.hits}</strong> מתוך <strong>${total}</strong> חברי כנסת שהצביעו ${voteLabel}</div>
     <div class="score-bar-wrap"><div class="score-bar-fill" id="sbf" style="width:0%"></div></div>
-    <div style="color:var(--muted);font-size:12px;margin-bottom:16px">${pct}% הצלחה</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:14px">${pct}% הצלחה</div>
     <div class="result-stats">
       <div><div class="rs-label">✅ עוצרו</div><div class="rs-val">${gs.hits}</div></div>
       <div><div class="rs-label">❌ פוספסו</div><div class="rs-val">${gs.misses}</div></div>
@@ -553,7 +660,23 @@ function endGame(){
     <div class="result-btns">
       <button class="btn btn-gold"  onclick="restartGame()">🔄 שחק שוב</button>
       <button class="btn btn-ghost" onclick="quitGame()">🏠 בחר הצבעה</button>
+    </div>
+
+    <div class="members-section">
+      <div class="members-section-title">
+        כל חברי הכנסת שהצביעו ${voteLabel} (${allNames.length} ח"כ)
+      </div>
+      <div class="members-legend">
+        <span><span style="color:#86efac">✅</span> עצרת</span>
+        <span><span style="color:#fca5a5">❌</span> פוספס</span>
+      </div>
+      <div class="members-grid">
+        ${makeChips(hitNames,'hit','✅')}
+        ${makeChips(missNames,'miss','❌')}
+        ${unseenNames.length ? makeChips(unseenNames,'miss','⏱') : ''}
+      </div>
     </div>`;
+
   document.getElementById('result-overlay').classList.add('active');
   setTimeout(()=>{ const f=document.getElementById('sbf'); if(f) f.style.width=pct+'%'; },100);
 }
@@ -561,7 +684,15 @@ function endGame(){
 function restartGame(){ document.getElementById('result-overlay').classList.remove('active'); startGame(allGames.indexOf(gs.game)); }
 function quitGame(){ stopAll(); document.getElementById('result-overlay').classList.remove('active'); showScreen('home'); }
 function stopAll(){ clearInterval(spawnTimer);spawnTimer=null; clearInterval(gameTimer);gameTimer=null; cancelAnimationFrame(rafId);rafId=null; }
-function updateHud(){ if(!gs)return; document.getElementById('hud-hit').textContent=gs.hits; document.getElementById('hud-miss').textContent=gs.misses; }
+
+function updateHud(){
+  if(!gs)return;
+  document.getElementById('hud-hit').textContent=gs.hits;
+  document.getElementById('hud-miss').textContent=gs.misses;
+  // Show first-pass progress: how many unique members still not yet shown
+  const remain = gs.firstPassDone ? 0 : gs.firstPassPool.length - gs.firstPassIdx;
+  document.getElementById('hud-remain').textContent=remain;
+}
 
 function particles(cx,cy){
   const arena=document.getElementById('arena');
