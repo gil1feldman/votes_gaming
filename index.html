@@ -90,12 +90,10 @@
   .timer-bar  { height: 100%; background: linear-gradient(90deg,#166534,#22c55e); transition: width .25s linear; width: 100%; }
   .timer-bar.urgent { background: linear-gradient(90deg,#7f1d1d,#ef4444); }
 
-  /* progress bubbles counter */
   .hud-progress { flex-shrink: 0; font-size: 11px; color: var(--muted); font-family: monospace; white-space: nowrap; }
 
   #arena { flex: 1; position: relative; overflow: hidden; }
 
-  /* ── Bubble ── */
   @keyframes popIn {
     0%   { transform: translate(-50%,-50%) scale(0) rotate(-8deg); opacity: 0; }
     65%  { transform: translate(-50%,-50%) scale(1.1) rotate(2deg);  opacity: 1; }
@@ -127,7 +125,6 @@
   .name-bubble.tier2 { border-color: #f59e0b; box-shadow: 0 4px 20px rgba(245,158,11,0.2); }
   .name-bubble.tier3 { border-color: var(--red); box-shadow: 0 4px 24px rgba(239,68,68,0.4); }
 
-  /* inner progress bar */
   .bubble-bar {
     position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
     background: var(--gold); transform-origin: left center;
@@ -178,7 +175,6 @@
   .score-bar-wrap { width:100%; background:rgba(255,255,255,0.07); border-radius:10px; overflow:hidden; height:12px; margin:10px 0 4px; }
   .score-bar-fill { height:100%; border-radius:10px; background:linear-gradient(90deg,#166534,#22c55e); transition:width .7s ease; }
 
-  /* ── All members grid ── */
   .members-section { margin-top: 8px; text-align: right; }
   .members-section-title {
     font-size: 13px; font-weight: 700; color: var(--gold);
@@ -335,41 +331,44 @@
 </div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwgazehwQa2MAVvYTagAdnv3hJXjYRpGGlw8e3QZ9Yc63yivS4kf0VTa6Mi_-_-jLzt/exec";
+// ── כתובת Apps Script המעודכנת (פריסה עם תמיכה בעמודת "פעיל") ──
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7mtU_4w7tz6Iz4VPAkO5eUdEnil2PsiLpo17zscAJNxMJml7p5qBr9wJifIgiYlpy/exec";
+
 const CACHE_KEY   = "knesset-pop-cache-v1";
 const API_BASES   = ["https://www.knesset.gov.il","https://knesset.gov.il","https://main.knesset.gov.il"];
 const DETAIL_PATH = "/WebSiteApi/knessetapi/Votes/GetVoteDetails/";
 
-// bubbleMs = how long a bubble stays visible
-// maxAlive = max bubbles on screen at once
-// spawnMs  = ms between spawn attempts
 const DIFF_CONFIG = {
   easy:   { bubbleMs: 2600, maxAlive: 4,  spawnMs: 1000 },
   medium: { bubbleMs: 1700, maxAlive: 6,  spawnMs:  650 },
   hard:   { bubbleMs:  950, maxAlive: 9,  spawnMs:  380 },
 };
-const WAVE_COUNT      = 5;
-const BUBBLE_DECAY    = 0.82;
-const SPAWN_DECAY     = 0.86;
-const MIN_BUBBLE_MS   = 400;
-const MIN_SPAWN_MS    = 220;
-const GAME_DURATION   = 30;
+const WAVE_COUNT    = 5;
+const BUBBLE_DECAY  = 0.82;
+const SPAWN_DECAY   = 0.86;
+const MIN_BUBBLE_MS = 400;
+const MIN_SPAWN_MS  = 220;
+const GAME_DURATION = 30;
 
 const sleep   = ms => new Promise(r=>setTimeout(r,ms));
 const shuffle = a  => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];} return b; };
 const esc     = s  => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-function readCache() { try{return JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch{return{}} }
+function readCache()  { try{return JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch{return{}} }
 function writeCache(d){ try{localStorage.setItem(CACHE_KEY,JSON.stringify(d))}catch{} }
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('screen-'+id).classList.add('active'); }
 function setLoadMsg(m){ document.getElementById('load-msg').textContent=m||'…'; }
 
+// ── טעינת שורות מהגיליון — הסינון לפי "פעיל" נעשה בצד השרת (Apps Script) ──
 async function fetchSheetRows(){
   let data;
   try{ data=await(await fetch(APPS_SCRIPT_URL)).json(); }catch(e){ throw new Error('לא ניתן לטעון. בדוק חיבור.'); }
   if(!Array.isArray(data)) throw new Error('שגיאה בטעינה.');
-  return data.filter(r=>r.voteId&&/^\d+$/.test(r.voteId)).map(r=>({...r,shortName:(r.shortName||r.short_name||'').trim()}));
+  return data
+    .filter(r => r.voteId && /^\d+$/.test(r.voteId))
+    .map(r => ({...r, shortName:(r.shortName||r.short_name||'').trim()}));
 }
+
 async function fetchVoteDetails(voteId){
   for(const base of API_BASES){
     try{ const r=await fetch(base+DETAIL_PATH+voteId,{mode:'cors'}); if(!r.ok) throw 0; const d=await r.json(); if(d?.VoteDetails) return d; }catch(_){}
@@ -386,7 +385,7 @@ async function loadGames(bust=false){
   try{
     if(bust) writeCache({});
     const rows=await fetchSheetRows();
-    if(!rows.length) throw new Error('לא נמצאו משחקים');
+    if(!rows.length) throw new Error('לא נמצאו משחקים פעילים');
     const cache=readCache(), games=[];
     for(let i=0;i<rows.length;i++){
       const {voteId,type}=rows[i], ck=`${voteId}__${type}`;
@@ -407,6 +406,7 @@ async function loadGames(bust=false){
   }catch(e){ document.getElementById('error-msg').textContent=e.message; showScreen('error'); }
 }
 
+// ── renderHome: רק בפעם הראשונה מציג מודל הוראות ──
 let _firstHome=true;
 function renderHome(){
   const list=document.getElementById('game-list'); list.innerHTML='';
@@ -427,8 +427,10 @@ function renderHome(){
     card.onclick=()=>startGame(i);
     list.appendChild(card);
   });
+  // הוראות רק בטעינה הראשונה — לחיצה על "הצבעות אחרות" לא תפתח אותן שוב
   if(_firstHome){ _firstHome=false; setTimeout(()=>document.getElementById('modal-instructions').style.display='flex',300); }
 }
+
 function dismissModal(){ document.getElementById('modal-instructions').style.display='none'; }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -441,22 +443,16 @@ function startGame(idx){
   const game=allGames[idx];
   const cfg=DIFF_CONFIG[currentDiff];
 
-  // Fixed 30s. Pool = shuffled members for first pass, then free loop.
-  // firstPassDone tracks when every member appeared at least once.
   gs={
     game, cfg,
     gameDuration: GAME_DURATION,
     waveInterval: GAME_DURATION / WAVE_COUNT,
-    // First-pass pool (shuffled) — once exhausted we loop freely
     firstPassPool: shuffle([...game.members]),
     firstPassIdx:  0,
     firstPassDone: false,
-    // For the free loop after first pass
     freePool: [],
     freeIdx:  0,
     active:   [],
-    // Per-member result for the end screen: name -> 'hit' | 'miss'
-    // Set only on FIRST appearance of each name
     memberResults: {},
     hits:0, misses:0,
     elapsed:0, wave:0,
@@ -480,7 +476,6 @@ function gameTick(){
   if(!gs||gs.done) return;
   gs.elapsed+=0.25;
 
-  // Wave progression
   const newWave=Math.min(Math.floor(gs.elapsed/gs.waveInterval), WAVE_COUNT);
   if(newWave>gs.wave){
     gs.wave=newWave;
@@ -498,7 +493,6 @@ function gameTick(){
   bar.style.width=(pct*100)+'%';
   bar.className='timer-bar'+(pct<0.3?' urgent':'');
 
-  // End only at time limit
   if(gs.elapsed>=gs.gameDuration) endGame();
 }
 
@@ -522,15 +516,11 @@ function spawnBubble(){
   const maxNow=gs.cfg.maxAlive+gs.wave;
   if(alive>=maxNow) return;
 
-  // Pick next name:
-  // — First pass: go through every member once in shuffled order
-  // — After first pass: loop freely (new shuffle each full cycle)
   let name;
   if(!gs.firstPassDone){
     if(gs.firstPassIdx < gs.firstPassPool.length){
       name = gs.firstPassPool[gs.firstPassIdx++];
     } else {
-      // First pass complete — build free pool and continue
       gs.firstPassDone = true;
       gs.freePool = shuffle([...gs.game.members]);
       gs.freeIdx  = 0;
@@ -583,7 +573,6 @@ function hitBubble(b){
   particles(cx,cy);
   floatText(cx,cy,'+1','#86efac');
   gs.hits++;
-  // Record only on first appearance
   if(!gs.memberResults[b.name]) gs.memberResults[b.name]='hit';
   updateHud();
   setTimeout(()=>{ b.el.remove(); remove(b); }, 320);
@@ -595,7 +584,6 @@ function missBubble(b){
   b.el.classList.add('missed');
   floatText(parseFloat(b.el.style.left),parseFloat(b.el.style.top)-10,'✗','#fca5a5');
   gs.misses++;
-  // Record only on first appearance
   if(!gs.memberResults[b.name]) gs.memberResults[b.name]='miss';
   updateHud();
   setTimeout(()=>{ b.el.remove(); remove(b); }, 280);
@@ -611,7 +599,6 @@ function endGame(){
   const total=gs.hits+gs.misses;
   const pct=total?Math.round(gs.hits/total*100):0;
 
-  // שמירה ל-Google Sheets
   try {
     fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -633,11 +620,10 @@ function endGame(){
   const grade=pct>=80?'מדהים!':pct>=60?'כל הכבוד!':pct>=40?'לא רע…':'ההצבעה עברה 😬';
   const isFor = gs.game.type === 'בעד';
 
-  // All members: seen ones get their result, unseen ones get 'miss'
-  const allNames = gs.game.members;
-  const hitNames  = allNames.filter(n=>gs.memberResults[n]==='hit');
-  const missNames = allNames.filter(n=>gs.memberResults[n]==='miss');
-  const unseenNames = allNames.filter(n=>!gs.memberResults[n]); // never spawned in 30s
+  const allNames   = gs.game.members;
+  const hitNames   = allNames.filter(n=>gs.memberResults[n]==='hit');
+  const missNames  = allNames.filter(n=>gs.memberResults[n]==='miss');
+  const unseenNames= allNames.filter(n=>!gs.memberResults[n]);
 
   const makeChips = (names, cls, icon) =>
     names.map(n=>`<span class="member-chip ${cls}"><span class="chip-icon">${icon}</span>${esc(n)}</span>`).join('');
@@ -661,7 +647,6 @@ function endGame(){
       <button class="btn btn-gold"  onclick="restartGame()">🔄 שחק שוב</button>
       <button class="btn btn-ghost" onclick="quitGame()">🏠 בחר הצבעה</button>
     </div>
-
     <div class="members-section">
       <div class="members-section-title">
         כל חברי הכנסת שהצביעו ${voteLabel} (${allNames.length} ח"כ)
@@ -689,7 +674,6 @@ function updateHud(){
   if(!gs)return;
   document.getElementById('hud-hit').textContent=gs.hits;
   document.getElementById('hud-miss').textContent=gs.misses;
-  // Show first-pass progress: how many unique members still not yet shown
   const remain = gs.firstPassDone ? 0 : gs.firstPassPool.length - gs.firstPassIdx;
   document.getElementById('hud-remain').textContent=remain;
 }
